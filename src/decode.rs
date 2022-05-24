@@ -1,4 +1,12 @@
-use crate::Decoded;
+use std::collections::HashMap;
+
+#[derive(Debug)]
+pub enum Decoded {
+    Str(String),
+    Num(u64),
+    Dict(HashMap<Box<Decoded>, Box<Decoded>>),
+    List(Vec<Box<Decoded>>)
+}
 
 pub fn decode(text: String) -> (Decoded, usize) {
     let mut ns_text = text.replace(" ", "");
