@@ -25,7 +25,9 @@ pub fn decode_list(text: String) -> (Decoded, usize) {
     let mut i: usize = 0;
     while i<text.len() {
         let ch = chs[i];
-        end = i;
+        if ch == '>' {
+            break;
+        }
         let newm: Decoded;
         let f = match ch {
             '<' => decode_list,
@@ -36,10 +38,7 @@ pub fn decode_list(text: String) -> (Decoded, usize) {
         newm = j.0;
         i += j.1+1;
         ls.push(Box::new(newm));
-        let ch = chs[i];
-        if ch == '>' {
-            break;
-        }
+        end = i;
     }
     (Decoded::List(ls), end+1)
 }
