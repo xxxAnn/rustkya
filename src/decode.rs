@@ -1,45 +1,6 @@
 use std::{collections::HashMap, hash::Hash};
 use std::fmt;
-
-#[derive(Debug, Clone)]
-pub enum Decoded {
-    Str(String),
-    Num(u64),
-    Dict(KyaMap),
-    List(Vec<Box<Decoded>>)
-}
-
-#[derive(Clone)]
-pub struct KyaMap {
-    k: Vec<Decoded>,
-    v: Vec<Decoded>
-}
-
-impl fmt::Debug for KyaMap {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_map().entries(self.veccify().into_iter()).finish()
-    }
-}
-
-
-impl KyaMap {
-    fn new() -> Self {
-        KyaMap {
-            k: Vec::new(),
-            v: Vec::new()
-        }
-    }
-}
-
-impl KyaMap {
-    fn veccify(&self) -> Vec<(Decoded, Decoded)> {
-        let mut v = Vec::new();
-        for i in 0..self.k.len() {
-            v.push((self.k[i].clone(), self.v[i].clone()))
-        }
-        v
-    }
-}
+use crate::types::{Decoded, KyaMap};
 
 
 pub fn decode(text: String) -> (Decoded, usize) {
