@@ -1,18 +1,52 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
+use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Decoded {
     Str(String),
     Num(u64),
-    Dict(HashMap<Box<Decoded>, Box<Decoded>>),
+    Dict(KyaMap),
     List(Vec<Box<Decoded>>)
 }
+
+#[derive(Clone)]
+pub struct KyaMap {
+    k: Vec<Decoded>,
+    v: Vec<Decoded>
+}
+
+impl fmt::Debug for KyaMap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_map().entries(self.veccify().into_iter()).finish()
+    }
+}
+
+
+impl KyaMap {
+    fn new() -> Self {
+        KyaMap {
+            k: Vec::new(),
+            v: Vec::new()
+        }
+    }
+}
+
+impl KyaMap {
+    fn veccify(&self) -> Vec<(Decoded, Decoded)> {
+        let mut v = Vec::new();
+        for i in 0..self.k.len() {
+            v.push((self.k[i].clone(), self.v[i].clone()))
+        }
+        v
+    }
+}
+
 
 pub fn decode(text: String) -> (Decoded, usize) {
     let mut ns_text = text.replace(" ", "");
     let f = match ns_text.chars().collect::<Vec<char>>()[0] {
         '<' => decode_list,
-        '$' => decode_dict,
+        '^' => decode_dict,
         _ => decode_literal
     };
     f(ns_text[1..ns_text.len()].to_string())
@@ -31,7 +65,7 @@ pub fn decode_list(text: String) -> (Decoded, usize) {
         let newm: Decoded;
         let f = match ch {
             '<' => decode_list,
-            '$' => decode_dict,
+            '^' => decode_dict,
             _ => decode_literal
         };
         let j = f((text[i+1..text.len()].to_string()));
@@ -43,7 +77,34 @@ pub fn decode_list(text: String) -> (Decoded, usize) {
     (Decoded::List(ls), end+1)
 }
 
-pub fn decode_dict(text: String) -> (Decoded, usize) { todo!() }
+pub fn decode_dict(text: String) -> (Decoded, usize) { 
+    let chs: Vec<char> = text.chars().collect();
+    let mut ls = KyaMap::new();
+    let mut end: usize = 0;
+    let mut i: usize = 0;
+    while i<text.len() {
+        let ch = chs[i];
+        if ch == '$' {
+            break;
+        }
+        let newm: Decoded;
+        let f = match ch {
+            '<' => decode_list,
+            '^' => decode_dict,
+            _ => decode_literal
+        };
+        let j = f((text[i+1..text.len()].to_string()));
+        newm = j.0;
+        if ls.k.len() <= ls.v.len() {
+            ls.k.push(newm);
+        } else {
+            ls.v.push(newm);
+        }
+        i += j.1+1;
+        end = i;
+    }
+    (Decoded::Dict(ls), end+1)
+ }
 
 pub fn decode_literal(text: String) -> (Decoded, usize) { 
     let f = text.chars().collect::<Vec<char>>()[0];
