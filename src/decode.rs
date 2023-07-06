@@ -1,25 +1,24 @@
 use std::{collections::HashMap, hash::Hash};
 use std::fmt;
-use crate::types::{Decoded, KyaMap};
+use crate::types::{Decoded, KyaMap, Result};
 
-
-pub fn decode(text: String) -> (Decoded, usize) {
+pub fn decode(text: String) -> Result<Decoded> {
     let mut ns_text = text.replace(" ", "");
     let f = match ns_text.chars().collect::<Vec<char>>()[0] {
         '<' => decode_list,
         '^' => decode_dict,
         _ => decode_literal
     };
-    f(ns_text[1..ns_text.len()].to_string())
+    Ok(f(ns_text[1..ns_text.len()].to_string())?.0)
 }
 
-pub fn decode_list(text: String) -> (Decoded, usize) {
+pub fn decode_list(text: String) -> Result<(Decoded, usize)> {
     let chs: Vec<char> = text.chars().collect();
     let mut ls: Vec<Box<Decoded>> = Vec::new();
     let mut end: usize = 0;
     let mut i: usize = 0;
     while i<text.len() {
-        let ch = chs[i];
+        let ch = *chs.get(i).ok_or("Text is longer than list of characters.")?;
         if ch == '>' {
             break;
         }
@@ -29,22 +28,22 @@ pub fn decode_list(text: String) -> (Decoded, usize) {
             '^' => decode_dict,
             _ => decode_literal
         };
-        let j = f((text[i+1..text.len()].to_string()));
+        let j = f((text[i+1..text.len()].to_string()))?;
         newm = j.0;
         i += j.1+1;
         ls.push(Box::new(newm));
         end = i;
     }
-    (Decoded::List(ls), end+1)
+    Ok((Decoded::List(ls), end+1))
 }
 
-pub fn decode_dict(text: String) -> (Decoded, usize) { 
+pub fn decode_dict(text: String) -> Result<(Decoded, usize)> { 
     let chs: Vec<char> = text.chars().collect();
     let mut ls = KyaMap::new();
     let mut end: usize = 0;
     let mut i: usize = 0;
     while i<text.len() {
-        let ch = chs[i];
+        let ch = *chs.get(i).ok_or("Text is longer than list of characters.")?;
         if ch == '$' {
             break;
         }
@@ -54,7 +53,7 @@ pub fn decode_dict(text: String) -> (Decoded, usize) {
             '^' => decode_dict,
             _ => decode_literal
         };
-        let j = f((text[i+1..text.len()].to_string()));
+        let j = f((text[i+1..text.len()].to_string()))?;
         newm = j.0;
         if ls.k.len() <= ls.v.len() {
             ls.k.push(newm);
@@ -64,16 +63,17 @@ pub fn decode_dict(text: String) -> (Decoded, usize) {
         i += j.1+1;
         end = i;
     }
-    (Decoded::Dict(ls), end+1)
+    
+    Ok((Decoded::Dict(ls), end+1))
  }
 
-pub fn decode_literal(text: String) -> (Decoded, usize) { 
+pub fn decode_literal(text: String) -> Result<(Decoded, usize)> { 
     let f = text.chars().collect::<Vec<char>>()[0];
     let mut obj = &text[1..text.len()];
-    let end = text.find('\'').unwrap();
-    obj = &obj[0..obj.find('\'').unwrap()];
+    let end = text.find('\'').ok_or("Literal has no end")?;
+    obj = &obj[0..obj.find('\'').ok_or("Literal has no end")?];
     match f {
-        'i' => return (Decoded::Num(obj.parse::<u64>().expect("Invalid literal")), end+1),
-        _ => return (Decoded::Str(obj.to_string()), end+1)
+        'i' => return Ok((Decoded::Num(obj.parse::<u64>().expect("Invalid literal")), end+1)),
+        _ => return Ok((Decoded::Str(obj.to_string()), end+1))
     }
 }

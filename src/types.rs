@@ -1,6 +1,33 @@
 use std::{collections::HashMap, hash::Hash};
 use std::fmt;
 
+pub type Result<T> = std::result::Result<T, KyaError>;
+
+#[derive(Debug)]
+pub enum KyaError {
+    Generic(&'static str)
+}
+
+impl std::error::Error for KyaError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
+
+impl std::fmt::Display for KyaError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Generic(s) => write!(f, "{s}")
+        }
+    }
+}
+
+impl From<&'static str> for KyaError {
+    fn from(value: &'static str) -> Self {
+        Self::Generic(value)
+    }
+}
+
 #[derive(Clone)]
 pub enum Decoded {
     Str(String),
